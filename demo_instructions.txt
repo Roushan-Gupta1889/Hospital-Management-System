@@ -1,0 +1,376 @@
+HOSPITAL MANAGEMENT SYSTEM - DEMO INSTRUCTIONS
+==============================================
+
+PREREQUISITES
+-------------
+1. Python 3.8 or higher installed
+2. Node.js 16 or higher installed
+3. Redis server installed and running
+4. Internet connection (for downloading dependencies)
+
+STEP-BY-STEP SETUP INSTRUCTIONS
+--------------------------------
+
+PART 1: REDIS SETUP
+-------------------
+1. Install Redis (if not already installed):
+   - Windows: Download from https://github.com/microsoftarchive/redis/releases
+   - Mac: brew install redis
+   - Linux: sudo apt-get install redis-server
+
+2. Start Redis server:
+   redis-server
+
+   Keep this terminal window open!
+
+PART 2: BACKEND SETUP
+---------------------
+1. Open a new terminal/command prompt
+
+2. Navigate to backend directory:
+   cd project_Hospital_001/backend
+
+3. Create and activate virtual environment:
+   Windows:
+     python -m venv venv
+     venv\Scripts\activate
+
+   Mac/Linux:
+     python3 -m venv venv
+     source venv/bin/activate
+
+4. Install Python dependencies:
+   pip install -r requirements.txt
+
+5. Run the Flask backend:
+   python start_backend.py
+
+   You should see:
+   - "Admin user created: username='admin', password='admin123'"
+   - "Running on http://0.0.0.0:5000"
+
+   Keep this terminal window open!
+
+PART 3: CELERY SETUP (BACKGROUND JOBS)
+---------------------------------------
+1. Open a new terminal/command prompt
+
+2. Navigate to backend directory:
+   cd project_Hospital_001/backend
+
+3. Activate virtual environment:
+   Windows: venv\Scripts\activate
+   Mac/Linux: source venv/bin/activate
+
+4. Start Celery worker:
+   Windows:
+     celery -A app.tasks.celery worker --pool=solo --loglevel=info
+
+   Mac/Linux:
+     celery -A app.tasks.celery worker --loglevel=info
+
+   Keep this terminal window open!
+
+5. (Optional) Open another terminal for Celery Beat (scheduled tasks):
+   cd project_Hospital_001/backend
+   Activate venv
+   celery -A app.tasks.celery beat --loglevel=info
+
+PART 4: FRONTEND SETUP
+----------------------
+1. Open a new terminal/command prompt
+
+2. Navigate to frontend directory:
+   cd project_Hospital_001/frontend
+
+3. Install Node.js dependencies:
+   npm install
+
+4. Start the development server:
+   npm run dev
+
+   You should see:
+   - "Local: http://localhost:3000/"
+
+5. Open your web browser and go to:
+   http://localhost:3000
+
+DEMO WALKTHROUGH
+================
+
+SCENARIO 1: ADMIN LOGIN AND SETUP
+----------------------------------
+1. Go to http://localhost:3000
+2. Click on "Login" tab
+3. Enter credentials:
+   Username: admin
+   Password: admin123
+4. Click "Login"
+
+5. Admin Dashboard:
+   - View statistics (doctors, patients, appointments)
+   - Initially will show 0 for all
+
+6. Add a Department:
+   - Go to "Doctors" from navbar
+   - Note: We need to create departments first
+   - In your browser, open developer console (F12)
+   - Execute this to add departments:
+     * Or use Postman/curl to POST to http://localhost:5000/api/admin/departments
+     * Body: {"name": "Cardiology", "description": "Heart specialist"}
+
+   Alternative: Add via backend directly or modify admin UI to include department creation
+
+7. Add a Doctor:
+   - Click "Add Doctor" button
+   - Fill in:
+     * Full Name: Dr. John Smith
+     * Username: drjohn
+     * Email: john@hospital.com
+     * Password: doctor123
+     * Phone: 1234567890
+     * Specialization: Cardiologist
+     * Qualification: MD, Cardiology
+     * Experience: 10 years
+     * Consultation Fee: 100
+   - Click "Save"
+
+8. Add another doctor for demo:
+   - Full Name: Dr. Sarah Johnson
+   - Username: drsarah
+   - Email: sarah@hospital.com
+   - Password: doctor123
+   - Specialization: General Physician
+   - Experience: 5 years
+   - Fee: 50
+
+9. Logout
+
+SCENARIO 2: PATIENT REGISTRATION AND BOOKING
+--------------------------------------------
+1. Click "Register" tab
+2. Fill in patient details:
+   - Full Name: John Doe
+   - Username: johndoe
+   - Email: john.doe@email.com
+   - Phone: 9876543210
+   - Password: patient123
+   - Gender: Male
+
+3. Click "Register as Patient"
+4. You'll see success message
+5. Switch to "Login" tab
+6. Login with:
+   Username: johndoe
+   Password: patient123
+
+7. Patient Dashboard:
+   - View available departments
+   - See no appointments yet
+
+8. Book an Appointment:
+   - Click "Doctors" in navbar
+   - View available doctors
+   - Click "Book Appointment" for Dr. John Smith
+   - Select:
+     * Date: Tomorrow's date
+     * Time: 10:00 AM
+     * Reason: Regular checkup
+   - Click "Book Appointment"
+
+9. View Appointments:
+   - Click "Appointments" in navbar
+   - See your booked appointment
+   - Status will show "booked"
+
+10. Test Conflict Prevention:
+    - Try to book another appointment with Dr. John Smith
+    - Same date and time: Tomorrow at 10:00 AM
+    - You should get error: "This time slot is already booked"
+
+11. Logout
+
+SCENARIO 3: DOCTOR LOGIN AND TREATMENT
+--------------------------------------
+1. Login as Doctor:
+   Username: drjohn
+   Password: doctor123
+
+2. Doctor Dashboard:
+   - View upcoming appointments
+   - See today's appointments
+   - View patient list
+
+3. Set Availability:
+   - Click on profile or availability section
+   - Add availability for next 7 days
+   - Set time: 9:00 AM to 5:00 PM
+
+4. Manage Appointments:
+   - Click "Appointments" in navbar
+   - View all assigned appointments
+   - Find John Doe's appointment
+
+5. Complete Appointment:
+   - Click "Complete" button
+   - Fill in:
+     * Diagnosis: Patient has high blood pressure
+     * Prescription: Amlodipine 5mg, once daily
+     * Treatment Notes: Advised low salt diet and regular exercise
+     * Next Visit: 1 week from now
+   - Click "Complete Appointment"
+
+6. View Patient History:
+   - Go back to appointments
+   - Click "View" on the completed appointment
+   - See treatment details
+
+7. Logout
+
+SCENARIO 4: PATIENT VIEWS TREATMENT HISTORY
+-------------------------------------------
+1. Login as Patient (johndoe/patient123)
+2. Go to "Appointments"
+3. Filter by "Completed" status
+4. Click "View" on completed appointment
+5. See diagnosis, prescription, and treatment notes
+6. Click "Export Treatment History"
+7. You'll get a task ID
+8. Check backend terminal - should show CSV export process
+
+SCENARIO 5: ADMIN MANAGEMENT FEATURES
+--------------------------------------
+1. Login as Admin (admin/admin123)
+2. Go to "Patients"
+   - Search for "john"
+   - View patient details
+   - See all patient information
+
+3. Go to "Doctors"
+   - Search for "cardio"
+   - Edit doctor information
+   - Update consultation fee to 120
+   - Save changes
+
+4. View All Appointments:
+   - Click "Appointments"
+   - See all appointments in the system
+   - Filter by status
+
+5. Test Deactivation:
+   - Go to "Doctors"
+   - Click "Deactivate" on a doctor
+   - Confirm
+   - Doctor status changes to "Inactive"
+
+TESTING BACKGROUND JOBS
+-----------------------
+
+1. Daily Reminders:
+   - Create an appointment for today
+   - Check Celery worker terminal
+   - You should see reminder messages in console
+
+2. CSV Export:
+   - Login as patient with completed appointments
+   - Click "Export Treatment History"
+   - Check Celery worker terminal
+   - Look for exports/ folder in backend directory
+   - Find the generated CSV file
+
+3. Monthly Reports:
+   - This runs automatically on 1st of each month
+   - To test manually, modify the Celery beat schedule
+   - Or trigger manually via Python console
+
+TESTING CACHING
+---------------
+1. Open browser Developer Tools (F12)
+2. Go to Network tab
+3. Login as Patient
+4. Go to Dashboard
+5. Note the API response time
+6. Refresh the page
+7. Notice faster response (data served from cache)
+8. Wait 2-3 minutes (cache expiry)
+9. Refresh again - new API call made
+
+API TESTING WITH POSTMAN/CURL
+------------------------------
+
+1. Login:
+POST http://localhost:5000/api/auth/login
+Body: {"username": "admin", "password": "admin123"}
+
+2. Get Dashboard:
+GET http://localhost:5000/api/admin/dashboard
+
+3. Create Department:
+POST http://localhost:5000/api/admin/departments
+Body: {"name": "Cardiology", "description": "Heart specialists"}
+
+4. Get All Doctors:
+GET http://localhost:5000/api/admin/doctors
+
+5. Book Appointment (as patient):
+POST http://localhost:5000/api/appointments
+Body: {
+  "doctor_id": 1,
+  "appointment_date": "2025-12-01",
+  "appointment_time": "10:00",
+  "reason": "Checkup"
+}
+
+COMMON ISSUES AND SOLUTIONS
+---------------------------
+
+Issue: "Connection refused" error
+Solution: Make sure Redis server is running
+
+Issue: "Module not found" error
+Solution: Activate virtual environment and reinstall requirements
+
+Issue: Database not created
+Solution: Delete any existing hospital.db file and restart Flask
+
+Issue: Frontend not connecting to backend
+Solution: Check if Flask is running on port 5000
+
+Issue: Celery tasks not executing
+Solution: Make sure Celery worker is running
+
+Issue: "Admin already exists" warning
+Solution: This is normal - admin is created only once
+
+VERIFICATION CHECKLIST
+----------------------
+✓ Redis server running
+✓ Flask backend running on port 5000
+✓ Celery worker running
+✓ Frontend running on port 3000
+✓ Admin can login
+✓ Admin can create doctors
+✓ Patients can register
+✓ Patients can book appointments
+✓ Conflict prevention works
+✓ Doctors can complete appointments
+✓ Treatment history visible
+✓ CSV export works
+✓ Caching working (check Network tab)
+
+STOPPING THE APPLICATION
+-------------------------
+1. Press Ctrl+C in each terminal window
+2. Deactivate virtual environment: deactivate
+3. Stop Redis server if needed
+
+IMPORTANT NOTES
+---------------
+1. The database (hospital.db) is created automatically
+2. Admin credentials are printed in console on first run
+3. All passwords are hashed using Werkzeug
+4. Redis must be running for caching and Celery
+5. Celery worker is required for background jobs
+6. Frontend proxies /api requests to backend
+
+For additional help, refer to README.md

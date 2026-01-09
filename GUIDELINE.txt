@@ -1,0 +1,532 @@
+HOSPITAL MANAGEMENT SYSTEM V2 - PROJECT GUIDELINE
+==================================================
+
+PROJECT OVERVIEW
+----------------
+This is a comprehensive Hospital Management System designed to manage patients, doctors,
+appointments, and treatments efficiently. The system implements role-based access control
+with three user types: Admin, Doctor, and Patient.
+
+TECHNOLOGY STACK COMPLIANCE
+---------------------------
+✓ Flask - Backend API framework
+✓ VueJS 3 - Frontend UI framework with Vue Router
+✓ Bootstrap 5 - CSS framework for styling
+✓ SQLite - Database (programmatically created)
+✓ Redis - Caching and message broker
+✓ Celery - Batch jobs and scheduled tasks
+✓ Jinja2 - Template engine (minimal use for entry point only)
+
+ARCHITECTURE OVERVIEW
+---------------------
+
+1. BACKEND (Flask)
+   - RESTful API architecture
+   - Modular route organization (auth, admin, doctor, patient, appointments)
+   - SQLAlchemy ORM for database operations
+   - Session-based authentication
+   - Role-based access control using decorators
+   - Redis caching for performance optimization
+
+2. FRONTEND (Vue.js)
+   - Single Page Application (SPA)
+   - Component-based architecture
+   - Vue Router for navigation
+   - Axios for HTTP requests
+   - Bootstrap 5 for responsive design
+   - LocalStorage for session management
+
+3. DATABASE (SQLite)
+   - Programmatically created on first run
+   - 7 main models: User, Department, Doctor, Patient, Appointment, Treatment, DoctorAvailability
+   - Foreign key relationships properly defined
+   - Cascade delete operations where appropriate
+
+4. BACKGROUND JOBS (Celery + Redis)
+   - Daily appointment reminders
+   - Monthly doctor activity reports
+   - Async CSV export for patient treatment history
+
+MILESTONE IMPLEMENTATION DETAILS
+---------------------------------
+
+MILESTONE 1: Database Models and Schema Setup
+----------------------------------------------
+Files: backend/app/models.py
+
+Models Implemented:
+1. User - Base authentication model
+   - Fields: id, username, email, password_hash, role, full_name, phone, is_active
+   - Methods: set_password(), check_password(), to_dict()
+   - Relationships: doctor_profile, patient_profile
+
+2. Department
+   - Fields: id, name, description
+   - Relationships: doctors (one-to-many)
+
+3. Doctor
+   - Fields: id, user_id, department_id, specialization, qualification, experience_years, consultation_fee
+   - Relationships: user, department, availabilities, appointments
+
+4. DoctorAvailability
+   - Fields: id, doctor_id, date, start_time, end_time, is_available
+   - Used for: Doctor scheduling and availability management
+
+5. Patient
+   - Fields: id, user_id, date_of_birth, gender, address, blood_group, emergency_contact, medical_history
+   - Relationships: user, appointments
+
+6. Appointment
+   - Fields: id, patient_id, doctor_id, appointment_date, appointment_time, status, reason, notes
+   - Status values: 'booked', 'completed', 'cancelled'
+   - Relationships: patient, doctor, treatment
+
+7. Treatment
+   - Fields: id, appointment_id, diagnosis, prescription, treatment_notes, next_visit_date
+   - One-to-one relationship with Appointment
+
+Database Creation:
+- Automatic creation via db.create_all() in __init__.py
+- Admin user programmatically created on first run
+- No manual database operations required
+
+MILESTONE 2: Authentication and Role-Based Access Control
+---------------------------------------------------------
+Files: backend/app/routes/auth.py, backend/app/utils.py
+
+Authentication Features:
+1. Password Hashing
+   - Uses Werkzeug's generate_password_hash and check_password_hash
+   - Secure password storage
+
+2. Session Management
+   - Flask session-based authentication
+   - User ID and role stored in session
+
+3. Registration
+   - Patient self-registration endpoint
+   - Automatic patient profile creation
+
+4. Login/Logout
+   - Universal login for all roles
+   - Session clearing on logout
+
+5. Access Control Decorators
+   - @login_required - Requires any authenticated user
+   - @role_required('admin', 'doctor', 'patient') - Role-specific access
+   - Implemented in utils.py
+
+MILESTONE 3: Admin Dashboard and Management
+-------------------------------------------
+Files: backend/app/routes/admin.py, frontend/src/views/Dashboard.vue, frontend/src/views/Patients.vue, frontend/src/views/Doctors.vue
+
+Admin Features:
+1. Dashboard Statistics (cached for 5 minutes)
+   - Total doctors, patients, appointments
+   - Appointment status breakdown
+
+2. Department Management
+   - Create departments
+   - List all departments
+   - Used for doctor categorization
+
+3. Doctor Management
+   - Create doctor accounts
+   - Update doctor profiles
+   - Deactivate doctors (soft delete)
+   - Search by name or specialization
+
+4. Patient Management
+   - View all patients
+   - Update patient information
+   - Deactivate patients
+   - Search by name, email, or phone
+
+5. Appointment Oversight
+   - View all appointments system-wide
+   - Filter by status
+
+Caching Implementation:
+- Dashboard stats cached with key 'admin:dashboard'
+- Cache invalidation on data changes
+- 5-minute expiry for statistics
+
+MILESTONE 4: Doctor Dashboard & Appointment/Treatment Management
+----------------------------------------------------------------
+Files: backend/app/routes/doctor.py, frontend/src/views/Dashboard.vue
+
+Doctor Features:
+1. Dashboard
+   - Upcoming appointments (next 7 days)
+   - Today's appointments
+   - Total patients count
+   - Appointment statistics
+
+2. Appointment Management
+   - View assigned appointments
+   - Filter by status and date range
+   - Mark appointments as completed
+   - Cancel appointments
+
+3. Treatment Management
+   - Add diagnosis and prescription
+   - Enter treatment notes
+   - Specify next visit date
+   - Update treatment records
+
+4. Patient History
+   - View patient's previous appointments
+   - Access past diagnoses and treatments
+   - Informed consultation support
+
+5. Availability Management
+   - Set availability for next 7 days
+   - Define time slots (start/end time)
+   - Update existing availability
+
+MILESTONE 5: Patient Dashboard and Appointment System
+-----------------------------------------------------
+Files: backend/app/routes/patient.py, frontend/src/views/Dashboard.vue, frontend/src/views/Appointments.vue
+
+Patient Features:
+1. Dashboard (cached for 2 minutes)
+   - View all departments
+   - See upcoming appointments
+   - Recent appointment history
+
+2. Profile Management
+   - Update personal information
+   - Edit medical history
+   - Update contact details
+
+3. Doctor Search
+   - Search by name or specialization
+   - Filter by department
+   - View doctor availability (next 7 days)
+   - See doctor profiles and fees
+
+4. Appointment Booking
+   - Select doctor
+   - Choose date and time
+   - Provide reason for visit
+   - Automatic conflict checking
+
+5. Appointment Management
+   - Reschedule appointments
+   - Cancel appointments
+   - View appointment status
+   - Access treatment history
+
+6. Treatment History Export
+   - Trigger async CSV export
+   - Track export status
+   - Download treatment records
+
+MILESTONE 6: Appointment History and Conflict Prevention
+--------------------------------------------------------
+Files: backend/app/routes/appointments.py
+
+Conflict Prevention:
+1. Double Booking Prevention
+   - Check for existing appointments at same date/time
+   - Return 409 Conflict error if slot taken
+   - Implemented in booking and rescheduling
+
+2. Appointment History
+   - Complete history with treatment details
+   - Filterable by status
+   - Includes diagnosis, prescriptions, notes
+
+3. Status Management
+   - Dynamic status updates
+   - Booked → Completed
+   - Booked → Cancelled
+   - Status-based filtering
+
+4. Data Integrity
+   - Foreign key constraints
+   - Cascade deletes where appropriate
+   - Transaction management
+
+MILESTONE 7: Backend Jobs (Celery + Redis)
+------------------------------------------
+Files: backend/app/tasks.py
+
+Job Implementations:
+
+1. Daily Reminders (Scheduled)
+   Task: send_daily_reminders
+   Schedule: Daily
+   Functionality:
+   - Queries appointments for current date
+   - Filters by 'booked' status
+   - Sends reminder for each appointment
+   - Output: Console log (can be extended to email/SMS)
+
+2. Monthly Reports (Scheduled)
+   Task: send_monthly_report
+   Schedule: Monthly (1st day)
+   Functionality:
+   - Generates HTML report for doctor
+   - Includes appointment statistics
+   - Lists diagnoses and treatments
+   - Output: HTML content (can be emailed)
+
+3. CSV Export (User-Triggered)
+   Task: export_patient_treatments_csv
+   Trigger: Patient request
+   Functionality:
+   - Exports treatment history to CSV
+   - Includes patient info, doctor, diagnosis, treatment
+   - Saves to exports/ directory
+   - Returns task ID for status tracking
+
+Celery Configuration:
+- Broker: Redis
+- Backend: Redis
+- Beat scheduler for periodic tasks
+
+MILESTONE 8: API Performance Optimization & Caching
+---------------------------------------------------
+Files: backend/app/utils.py, implemented across all route files
+
+Caching Strategy:
+
+1. Cache Keys:
+   - 'admin:dashboard' - Admin statistics (5 min)
+   - 'patient:{id}:dashboard' - Patient dashboard (2 min)
+   - 'patient:{id}:history' - Treatment history (5 min)
+   - 'doctors:search:{params}' - Doctor search results (3 min)
+   - 'departments:*' - Department listings
+
+2. Cache Functions:
+   - cache_get(key) - Retrieve from cache
+   - cache_set(key, value, expiry) - Store with TTL
+   - cache_delete(key) - Delete specific key
+   - cache_clear_pattern(pattern) - Clear multiple keys
+
+3. Cache Invalidation:
+   - On data creation: Clear relevant caches
+   - On data update: Clear specific entity caches
+   - On deletion: Clear all related caches
+
+4. Performance Benefits:
+   - Reduced database queries
+   - Faster API responses
+   - Better scalability
+
+FRONTEND ARCHITECTURE
+--------------------
+
+Component Structure:
+1. App.vue - Main application component
+2. components/Navbar.vue - Navigation bar
+3. views/Login.vue - Authentication
+4. views/Dashboard.vue - Role-based dashboard
+5. views/Patients.vue - Patient management (Admin)
+6. views/Doctors.vue - Doctor listing and management
+7. views/Appointments.vue - Appointment management
+
+Routing:
+- / → Redirect to /login
+- /login → Login/Register
+- /dashboard → Role-based dashboard
+- /patients → Patient list (Admin only)
+- /doctors → Doctor list
+- /appointments → Appointment management
+
+State Management:
+- LocalStorage for user session
+- No Vuex/Pinia (kept simple as per requirements)
+- API calls via Axios
+
+KEY FEATURES IMPLEMENTATION
+--------------------------
+
+1. SEARCH FUNCTIONALITY
+   Admin:
+   - Search doctors by name/specialization
+   - Search patients by name/ID/contact
+
+   Patient:
+   - Search doctors by name/specialization/department
+
+   Implementation: ILIKE queries in SQLAlchemy
+
+2. APPOINTMENT CONFLICT PREVENTION
+   - Check existing appointments before booking
+   - Same doctor + same date + same time
+   - Return 409 status code on conflict
+   - Works for both booking and rescheduling
+
+3. ROLE-BASED DASHBOARDS
+   Admin: Statistics and management overview
+   Doctor: Appointments and patient list
+   Patient: Departments and upcoming appointments
+
+4. SOFT DELETE
+   - Users not physically deleted
+   - is_active flag set to False
+   - Preserves data integrity
+   - Maintains audit trail
+
+SECURITY CONSIDERATIONS
+-----------------------
+
+1. Password Security
+   - Hashed using Werkzeug
+   - Never stored in plain text
+   - Secure comparison
+
+2. Access Control
+   - Session-based authentication
+   - Role-based authorization
+   - Decorator-based protection
+
+3. SQL Injection Prevention
+   - SQLAlchemy ORM usage
+   - Parameterized queries
+   - No raw SQL
+
+4. CORS Configuration
+   - Flask-CORS for cross-origin requests
+   - Configured for development
+
+API DESIGN PRINCIPLES
+--------------------
+
+1. RESTful Design
+   - Proper HTTP methods (GET, POST, PUT, DELETE)
+   - Resource-based URLs
+   - Status codes (200, 201, 400, 401, 403, 404, 409, 500)
+
+2. JSON Responses
+   - Consistent format
+   - Error messages in JSON
+   - Proper content-type headers
+
+3. Modular Structure
+   - Separate blueprints for each role
+   - Clear endpoint organization
+   - Reusable utility functions
+
+TESTING CHECKLIST
+-----------------
+
+Functional Tests:
+✓ Admin can create doctors
+✓ Patients can self-register
+✓ Login works for all roles
+✓ Appointments can be booked
+✓ Conflict prevention works
+✓ Doctors can complete appointments
+✓ Treatment history visible
+✓ CSV export generates file
+✓ Caching reduces API calls
+✓ Background jobs execute
+
+Non-Functional Tests:
+✓ Database created programmatically
+✓ Admin created automatically
+✓ Responsive design (Bootstrap)
+✓ Error handling
+✓ Cache expiry working
+
+DEPLOYMENT NOTES
+---------------
+
+Development:
+- Backend: python start_backend.py
+- Frontend: npm run dev
+- Redis: redis-server
+- Celery: celery -A app.tasks.celery worker
+
+Production Considerations:
+- Use production WSGI server (Gunicorn)
+- Configure proper secret key
+- Use environment variables
+- Set up proper logging
+- Configure CORS properly
+- Use production Redis config
+- Set up Celery with supervisor
+
+COMMON CUSTOMIZATIONS
+---------------------
+
+1. Email Integration
+   - Modify tasks.py to use SMTP
+   - Add email configuration
+   - Update reminder and report functions
+
+2. SMS Integration
+   - Use Twilio or similar service
+   - Update daily reminder task
+   - Add phone number validation
+
+3. Additional Roles
+   - Add new role in User model
+   - Create new blueprint
+   - Add role-specific routes
+   - Update frontend routing
+
+4. Payment Integration
+   - Add payment model
+   - Integrate payment gateway
+   - Update appointment booking flow
+
+PROJECT STRENGTHS
+-----------------
+✓ Complete implementation of all 8 milestones
+✓ Proper separation of concerns
+✓ Scalable architecture
+✓ Comprehensive error handling
+✓ Performance optimization with caching
+✓ Background job processing
+✓ Responsive UI design
+✓ Secure authentication
+✓ RESTful API design
+✓ Proper documentation
+
+KNOWN LIMITATIONS
+-----------------
+- No real-time notifications (can add WebSockets)
+- Basic email/SMS (console output only)
+- No payment processing
+- No file uploads
+- No advanced analytics
+- Development-mode configurations
+
+FUTURE ENHANCEMENTS
+-------------------
+1. Real-time notifications using WebSockets
+2. Email/SMS integration for reminders
+3. Payment gateway integration
+4. Medical report uploads
+5. Video consultation feature
+6. Advanced analytics dashboard
+7. Mobile app using Vue Native
+8. Multi-language support
+9. Prescription PDF generation
+10. Integration with diagnostic labs
+
+SUPPORT AND MAINTENANCE
+-----------------------
+- Refer to README.md for detailed documentation
+- See demo_instructions.txt for step-by-step demo
+- Check code comments for implementation details
+- Database schema documented in models.py
+- API endpoints documented in README.md
+
+VERSION INFORMATION
+-------------------
+Project: Hospital Management System V2
+Python: 3.8+
+Node.js: 16+
+Flask: 3.0.0
+Vue.js: 3.4.0
+Bootstrap: 5.3.2
+Redis: Latest
+Celery: 5.3.4
+
+This guideline provides comprehensive information about the project structure,
+implementation details, and best practices followed throughout the development.
