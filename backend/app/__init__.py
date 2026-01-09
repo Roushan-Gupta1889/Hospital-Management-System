@@ -34,7 +34,12 @@ def create_app():
     
     # CORS - allow frontend URL from environment or localhost for development
     frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
-    CORS(app, supports_credentials=True, origins=[frontend_url, 'http://localhost:3000'])
+    CORS(app, 
+         resources={r"/api/*": {"origins": [frontend_url, 'http://localhost:3000']}},
+         supports_credentials=True,
+         allow_headers=["Content-Type", "Authorization"],
+         expose_headers=["Content-Type"],
+         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
     # Initialize Redis - make it optional
     global redis_client
