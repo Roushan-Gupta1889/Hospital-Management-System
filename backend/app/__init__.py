@@ -16,6 +16,11 @@ def create_app():
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-in-production')
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///hospital.db')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    
+    # Session configuration for cross-origin cookies
+    app.config['SESSION_COOKIE_SAMESITE'] = 'None'
+    app.config['SESSION_COOKIE_SECURE'] = True  # Required for SameSite=None
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
 
     # Redis configuration - optional
     redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
